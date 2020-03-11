@@ -1,92 +1,65 @@
-# Goof - Snyk's vulnerable demo app
-[![Known Vulnerabilities](https://snyk.io/test/github/snyk/goof/badge.svg?style=flat-square)](https://snyk.io/test/github/snyk/goof)
+# ADM-ZIP for NodeJS with added support for electron original-fs
 
-A vulnerable Node.js demo application, based on the [Dreamers Lab tutorial](http://dreamerslab.com/blog/en/write-a-todo-list-with-express-and-mongodb/).
+ADM-ZIP is a pure JavaScript implementation for zip data compression for [NodeJS](http://nodejs.org/). 
 
-## Features
+# Installation
 
-This vulnerable app includes the following capabilities to experiment with:
-* [Exploitable packages](#exploiting-the-vulnerabilities) with known vulnerabilities
-* [Docker Image Scanning](#docker-image-scanning) for base images with known vulnerabilities in system libraries
-* [Runtime alerts](#runtime-alerts) for detecting an invocation of vulnerable functions in open source dependencies
+With [npm](http://npmjs.org) do:
 
-## Running
-```bash
-mongod &
+    $ npm install adm-zip
+	
+## What is it good for?
+The library allows you to:
 
-git clone https://github.com/Snyk/snyk-demo-todo
-npm install
-npm start
-```
-This will run Goof locally, using a local mongo on the default port and listening on port 3001 (http://localhost:3001)
+* decompress zip files directly to disk or in memory buffers
+* compress files and store them to disk in .zip format or in compressed buffers
+* update content of/add new/delete files from an existing .zip
 
-## Running with docker-compose
-```bash
-docker-compose up --build
-docker-compose down
-```
+# Dependencies
+There are no other nodeJS libraries that ADM-ZIP is dependent of
 
-### Heroku usage
-Goof requires attaching a MongoLab service to be deployed as a Heroku app. 
-That sets up the MONGOLAB_URI env var so everything after should just work. 
+# Examples
 
-### CloudFoundry usage
-Goof requires attaching a MongoLab service and naming it "goof-mongo" to be deployed on CloudFoundry. 
-The code explicitly looks for credentials to that service. 
+## Basic usage
+```javascript
 
-### Cleanup
-To bulk delete the current list of TODO items from the DB run:
-```bash
-npm run cleanup
-```
+	var AdmZip = require('adm-zip');
 
-## Exploiting the vulnerabilities
+	// reading archives
+	var zip = new AdmZip("./my_file.zip");
+	var zipEntries = zip.getEntries(); // an array of ZipEntry records
 
-This app uses npm dependencies holding known vulnerabilities.
-
-Here are the exploitable vulnerable packages:
-- [Mongoose - Buffer Memory Exposure](https://snyk.io/vuln/npm:mongoose:20160116)
-- [st - Directory Traversal](https://snyk.io/vuln/npm:st:20140206)
-- [ms - ReDoS](https://snyk.io/vuln/npm:ms:20151024)
-- [marked - XSS](https://snyk.io/vuln/npm:marked:20150520)
-
-The `exploits/` directory includes a series of steps to demonstrate each one.
-
-## Docker Image Scanning
-
-The `Dockerfile` makes use of a base image (`node:6-stretch`) that is known to have system libraries with vulnerabilities.
-
-To scan the image for vulnerabilities, run:
-```bash
-snyk test --docker node:6-stretch --file=Dockerfile
-```
-
-To monitor this image and receive alerts with Snyk:
-```bash
-snyk monitor --docker node:6-stretch
+	zipEntries.forEach(function(zipEntry) {
+	    console.log(zipEntry.toString()); // outputs zip entries information
+		if (zipEntry.entryName == "my_file.txt") {
+		     console.log(zipEntry.getData().toString('utf8')); 
+		}
+	});
+	// outputs the content of some_folder/my_file.txt
+	console.log(zip.readAsText("some_folder/my_file.txt")); 
+	// extracts the specified file to the specified location
+	zip.extractEntryTo(/*entry name*/"some_folder/my_file.txt", /*target path*/"/home/me/tempfolder", /*maintainEntryPath*/false, /*overwrite*/true);
+	// extracts everything
+	zip.extractAllTo(/*target path*/"/home/me/zipcontent/", /*overwrite*/true);
+	
+	
+	// creating archives
+	var zip = new AdmZip();
+	
+	// add file directly
+	var content = "inner content of the file";
+	zip.addFile("test.txt", Buffer.alloc(content.length, content), "entry comment goes here");
+	// add local file
+	zip.addLocalFile("/home/me/some_picture.png");
+	// get everything as a buffer
+	var willSendthis = zip.toBuffer();
+	// or write everything to disk
+	zip.writeZip(/*target file name*/"/home/me/files.zip");
+	
+	
+	// ... more examples in the wiki
 ```
 
-## Runtime Alerts
+For more detailed information please check out the [wiki](https://github.com/cthackers/adm-zip/wiki).
 
-Snyk provides the ability to monitor application runtime behavior and detect an invocation of a function is known to be vulnerable and used within open source dependencies that the application makes use of.
-
-The agent is installed and initialized in [app.js](./app.js#L5).
-
-For the agent to report back to your snyk account on the vulnerabilities it detected it needs to know which project on Snyk to associate with the monitoring. Due to that, we need to provide it with the project id through an environment variable `SNYK_PROJECT_ID`
-
-To run the Node.js app with runtime monitoring:
-```bash
-SNYK_PROJECT_ID=<PROJECT_ID> npm start
-```
-
-** The app will continue to work normally even if not provided a project id
-
-## Fixing the issues
-To find these flaws in this application (and in your own apps), run:
-```
-npm install -g snyk
-snyk wizard
-```
-
-In this application, the default `snyk wizard` answers will fix all the issues.
-When the wizard is done, restart the application and run the exploits again to confirm they are fixed.
+[![build status](https://secure.travis-ci.org/cthackers/adm-zip.png)](http://travis-ci.org/cthackers/adm-zip)
